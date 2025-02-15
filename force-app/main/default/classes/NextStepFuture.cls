@@ -17,7 +17,7 @@
  * Note: The class below contains placeholders for implementing a future method to update accounts and opportunities.
  *       The accompanying test class 'AsynchronousTest' should also be updated to test this method.
  */
-public with sharing class NextStepFuture {
+ public with sharing class NextStepFuture {
 
     /* 
      * Question 1
@@ -27,9 +27,24 @@ public with sharing class NextStepFuture {
      * Opportunity Next Step field is a standard field
      * Update the corresponding test class AsynchronousTest and test method nextStepFuture_testUpdateAllNextStep to cover test this method
      */
-    //[public | private ] [static] data_type method_name (input parameters) {
-    //  The body of the method
-    //}
+    @future    
+    public static void updateAllNextStep (List<Id> accIds) {
+    //  Need SOQL then for loop to update the Account.Next_Step__c field for Accounts then Opportunities
+        List<Account> acctsWithOpps = [SELECT Id, Next_Step__c,
+                (SELECT Id, NextStep
+                FROM Opportunities)
+            FROM Account
+            WHERE Id IN: accIds
+            WITH USER_MODE
+            ];
+        System.debug('acctsWithOpps resuts: ' + acctsWithOpps); 
+        //Update the Next Step fields on Accs & Opps
+        for (Account acc : acctsWithOpps){
+            acc.Next_Step__c         = 'Meeting in the future';
+            // acc.Opportunity.NextStep = 'Meeting in the future';
+        }
+        Database.update(acctsWithOpps, accessLevel.USER_MODE);
+    }
 
     /*
     * Question 2
@@ -42,7 +57,7 @@ public with sharing class NextStepFuture {
         Opportunity bigDeal = new Opportunity();
         insertBigDeal(bigDeal);
 
-        UserRole[] roles = [SELECT Id, Name FROM UserRole WHERE Id = :UserInfo.getUserRoleId() OR Name = 'CRO' LIMIT 1];
+        UserRole[] roles = [SELECT Id, Name FROM UserRole WHERE Id = :UserInfo.getUserRoleId() OR Name = 'CRO' WITH USER_MODE LIMIT 1];
         updateUserRoleName(roles);
     }
 
@@ -53,7 +68,7 @@ public with sharing class NextStepFuture {
         opp.StageName = 'Closed Won'; 
         opp.CloseDate = Date.today();
         
-        insert opp;
+        Database.insert(opp, accessLevel.USER_MODE);
     }
 
 
