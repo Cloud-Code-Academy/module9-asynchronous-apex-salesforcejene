@@ -30,20 +30,28 @@
     @future    
     public static void updateAllNextStep (List<Id> accIds) {
     //  Need SOQL then for loop to update the Account.Next_Step__c field for Accounts then Opportunities
-        List<Account> acctsWithOpps = [SELECT Id, Next_Step__c,
+        List<Account> acctsWithOpps = [
+            SELECT Id, Next_Step__c,
                 (SELECT Id, NextStep
                 FROM Opportunities)
             FROM Account
             WHERE Id IN: accIds
             WITH USER_MODE
-            ];
-        System.debug('acctsWithOpps resuts: ' + acctsWithOpps); 
+        ];
+        System.debug('acctsWithOpps results: ' + acctsWithOpps);
         //Update the Next Step fields on Accs & Opps
+        List<Opportunity> oppList = new List<Opportunity>();
+
         for (Account acc : acctsWithOpps){
-            acc.Next_Step__c         = 'Meeting in the future';
-            // acc.Opportunity.NextStep = 'Meeting in the future';
+            acc.Next_Step__c = 'Meeting in the future';
+            for (Opportunity opp : acc.Opportunities) {
+                opp.NextStep = 'Meeting in the future';
+            }
         }
+        System.debug('oppList results: ' + oppList);
+        //commit
         Database.update(acctsWithOpps, accessLevel.USER_MODE);
+        Database.update(oppList, AccessLevel.USER_MODE);
     }
 
     /*
@@ -86,6 +94,6 @@
 
         role.Name = 'CRO';
 
-        upsert role;
+        Database.upsert(role, accessLevel.USER_MODE);
     }
 }
