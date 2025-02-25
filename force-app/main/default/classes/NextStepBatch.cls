@@ -18,11 +18,11 @@
  * 
  * Note: This class contains placeholders and commented sections that need to be updated with actual logic for querying and updating records.
  */
-public with sharing class NextStepBatch implements Database.Batchable<sObject>{
+public with sharing class NextStepBatch implements Database.Batchable <sObject>{
 
     public Database.QueryLocator start(Database.BatchableContext bc){
         // Query for all accounts and return the query locator.
-        return null; // Update null with the query locator
+        return Database.getQueryLocator([SELECT Id, Name FROM Account LIMIT 500]);
     }
     
     public void execute(Database.BatchableContext bc, List<Account> scope){

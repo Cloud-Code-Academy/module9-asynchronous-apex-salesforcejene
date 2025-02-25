@@ -1,6 +1,9 @@
-// Use .soql files to store SOQL queries.
-// You can execute queries in VS Code by selecting the
-//     query text and running the command:
-//     SFDX: Execute SOQL Query with Currently Selected Text
+SELECT Id, Next_Step__c,
+    (SELECT Id, NextStep
+    FROM Opportunities)
+FROM Account
+ORDER BY Next_Step__c DESC NULLS LAST
 
-SELECT Id, Name FROM Account
+SELECT Id, Name, NextStep
+FROM Opportunity
+ORDER BY Name DESC NULLS LAST
