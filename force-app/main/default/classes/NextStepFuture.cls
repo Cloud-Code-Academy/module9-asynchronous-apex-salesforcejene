@@ -46,6 +46,7 @@
             acc.Next_Step__c = 'Meeting in the future';
             for (Opportunity opp : acc.Opportunities) {
                 opp.NextStep = 'Meeting in the future';
+                oppList.add(opp);
             }
         }
         System.debug('oppList results: ' + oppList);
@@ -65,8 +66,17 @@
         Opportunity bigDeal = new Opportunity();
         insertBigDeal(bigDeal);
 
-        UserRole[] roles = [SELECT Id, Name FROM UserRole WHERE Id = :UserInfo.getUserRoleId() OR Name = 'CRO' WITH USER_MODE LIMIT 1];
-        updateUserRoleName(roles);
+        List<UserRole> roles = [
+            SELECT Id, Name
+            FROM UserRole
+            WHERE Id = :UserInfo.getUserRoleId() 
+            OR Name = 'CRO'WITH USER_MODE LIMIT 1
+        ];
+        List<Id> roleIds = new List<Id>();
+        for (UserRole role : roles){
+            roleIds.add(role.Id);
+        }
+        updateUserRoleName(roleIds);        
     }
 
     // Helper method to insert big deal
@@ -81,17 +91,23 @@
 
 
     // Helper method to update role name
-    private static void updateUserRoleName(UserRole[] roles){
+    @future
+    private static void updateUserRoleName(List<Id> roleIds){
+        List<UserRole> rolesToUpdate = [            
+            SELECT Id, Name
+            FROM UserRole
+            WHERE Id IN :roleIds
+            WITH USER_MODE
+        ];
         UserRole role;
-        if (roles.isEmpty()) {
+        if (rolesToUpdate.isEmpty()) {
             role = new UserRole();
             role.portalType = 'None'; 
             role.CaseAccessForAccountOwner = 'Edit'; 
             // role.OpportunityAccessForAccountOwner = 'Edit'; //This may need to be uncommented depending on your orgs Organization Wide Defaults(OWD) settings. If you are receiving FIELD_INTEGRITY_EXCEPTION, field integrity exception: unknown (Opportunity access level below organization default): [unknown], uncomment this line.
         } else {
-            role = roles[0];
+            role = rolesToUpdate[0];
         }
-
         role.Name = 'CRO';
 
         Database.upsert(role, accessLevel.USER_MODE);
