@@ -17,7 +17,8 @@
  * 
  * Note: The class below contains placeholders for implementing a queueable job to update accounts and opportunities.
  */
-public with sharing class NextStepQueueable {
+public with sharing class NextStepQueueable implements Queueable{
+    private static final Integer MAX_STACK = 5;
 
     // Member variable to store the accounts
     private Map<Id,Account> accounts;
@@ -25,34 +26,67 @@ public with sharing class NextStepQueueable {
     // Constructor to accept the accounts
     public NextStepQueueable(Map<Id,Account> accounts) {
         // Store the accounts in a member variable
+        this.accounts = accounts;
     }
 
     // Method to queue the job
     public static void enqueueJob() {
         // Get 10 accounts with Next Step populated
+        Map<Id,Account> accountsMap = new Map<Id,Account>([
+            SELECT Id, Name, Next_Step__c
+            FROM Account
+            WHERE Next_Step__c != NULL
+            WITH USER_MODE
+            LIMIT 10            
+        ]);
+ 
 
         // If there are any accounts, queue the job using System.enqueueJob
+        if (!accountsMap.isEmpty()){
+            System.enqueueJob(new NextStepQueueable(accountsMap));
+        }       
     }
 
     /*
      * Update/Uncomment the template code to create a method
      * Method to execute the queueable job
      */
-    //[public | private ] [static] data_type execute (input parameters) {
+    public void execute (QueueableContext context) {
+        
         // Get the accounts from the member variable
-
+        if (!accounts.isEmpty()){
+            for (Account acc : accounts.values()){
             // Remove the Next Step using the helper method
-
+            removeNextStep(acc);
+            }
+        }            
         // Update the accounts
+        update accounts.values();
 
         // Get the opportunities related to the accounts
-
-            // Remove the Next Step using the helper method
+            List<Opportunity> oppsWRelAccts = [
+                SELECT Id, NextStep
+                FROM Opportunity
+                WHERE AccountId = :accounts.keySet()
+                WITH USER_MODE
+            ];
+            if (!oppsWRelAccts.isEmpty()) {
+                for(Opportunity opp : oppsWRelAccts){
+                    // Remove the Next Step using the helper method
+                    removeNextStep(opp);
+                }
+            }            
 
         // Update the opportunities
+        update oppsWRelAccts;
 
         // Call the enqueueJob method to queue another job to process more records.
-    //}
+        Boolean hitMaxStack = AsyncInfo.getCurrentQueueableStackDepth() == MAX_STACK;
+        if(!hitMaxStack){
+            System.debug('requeue job');
+            NextStepQueueable.enqueueJob();
+        }
+    }
 
     // Helper method to remove the Next Step
     // Overloaded method to accept an opportunity

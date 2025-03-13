@@ -34,6 +34,11 @@ public with sharing class AsynchronousTest {
             testAccounts.add(new Account(Name = 'Test Account ' + i));
         }
         insert testAccounts;
+        //populate accIds for test method
+        List<Id> accIds = new List<Id>();
+        for (Account acc : testAccounts) {
+            accIds.add(acc.Id);
+        }
 
         List<Opportunity> testOpps = new List<Opportunity>();
         for (Account acc : testAccounts) {
@@ -43,7 +48,7 @@ public with sharing class AsynchronousTest {
 
         // Call the method to test between the startTest and stopTest methods
         Test.startTest();
-        //YOUR CODE HERE
+        NextStepFuture.updateAllNextStep(accIds);
         Test.stopTest();
 
         // Query the updated accounts and opportunities
@@ -62,7 +67,7 @@ public with sharing class AsynchronousTest {
     }
 
     @IsTest
-    static void nextStepFuture_testCreateDealAndUpdateRole() {        
+    static void nextStepFuture_testCreateDealAndUpdateRole() {
         Test.startTest();
         NextStepFuture.createDealAndUpdateRole();
         Test.stopTest();

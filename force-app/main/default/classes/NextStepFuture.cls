@@ -17,7 +17,7 @@
  * Note: The class below contains placeholders for implementing a future method to update accounts and opportunities.
  *       The accompanying test class 'AsynchronousTest' should also be updated to test this method.
  */
-public with sharing class NextStepFuture {
+ public with sharing class NextStepFuture {
 
     /* 
      * Question 1
@@ -27,9 +27,35 @@ public with sharing class NextStepFuture {
      * Opportunity Next Step field is a standard field
      * Update the corresponding test class AsynchronousTest and test method nextStepFuture_testUpdateAllNextStep to cover test this method
      */
-    //[public | private ] [static] data_type method_name (input parameters) {
-    //  The body of the method
-    //}
+    @future    
+    public static void updateAllNextStep (List<Id> accIds) {
+    //  Need SOQL then for loop to update the Account.Next_Step__c field for Accounts then Opportunities
+        List<Account> acctsWithOpps = [
+            SELECT Id, Name,
+                (SELECT Id, Name
+                FROM Opportunities)
+            FROM Account
+            WHERE Id IN: accIds
+            WITH USER_MODE
+        ];
+        //generating a new list to store loop results
+        List<Account>acctResults = new List<Account>();
+
+        //Update the Next Step fields on Accs & Opps
+        List<Opportunity> oppList = new List<Opportunity>();
+
+        for (Account acc : acctsWithOpps){
+            acc.Next_Step__c = 'Meeting in the future';
+            acctResults.add(acc);
+            for (Opportunity opp : acc.Opportunities) {
+                opp.NextStep = 'Meeting in the future';
+                oppList.add(opp);
+            }
+        }
+        //changed access level for account to overcome 'field being inaccessible error'
+        Database.update(acctResults, accessLevel.SYSTEM_MODE);
+        Database.update(oppList, AccessLevel.USER_MODE);
+    }
 
     /*
     * Question 2
@@ -42,8 +68,17 @@ public with sharing class NextStepFuture {
         Opportunity bigDeal = new Opportunity();
         insertBigDeal(bigDeal);
 
-        UserRole[] roles = [SELECT Id, Name FROM UserRole WHERE Id = :UserInfo.getUserRoleId() OR Name = 'CRO' LIMIT 1];
-        updateUserRoleName(roles);
+        List<UserRole> roles = [
+            SELECT Id, Name
+            FROM UserRole
+            WHERE Id = :UserInfo.getUserRoleId() 
+            OR Name = 'CRO'WITH USER_MODE LIMIT 1
+        ];
+        List<Id> roleIds = new List<Id>();
+        for (UserRole role : roles){
+            roleIds.add(role.Id);
+        }
+        updateUserRoleName(roleIds);        
     }
 
     // Helper method to insert big deal
@@ -53,24 +88,30 @@ public with sharing class NextStepFuture {
         opp.StageName = 'Closed Won'; 
         opp.CloseDate = Date.today();
         
-        insert opp;
+        Database.insert(opp, accessLevel.USER_MODE);
     }
 
 
     // Helper method to update role name
-    private static void updateUserRoleName(UserRole[] roles){
+    @future
+    private static void updateUserRoleName(List<Id> roleIds){
+        List<UserRole> rolesToUpdate = [            
+            SELECT Id, Name
+            FROM UserRole
+            WHERE Id IN :roleIds
+            WITH USER_MODE
+        ];
         UserRole role;
-        if (roles.isEmpty()) {
+        if (rolesToUpdate.isEmpty()) {
             role = new UserRole();
             role.portalType = 'None'; 
             role.CaseAccessForAccountOwner = 'Edit'; 
             // role.OpportunityAccessForAccountOwner = 'Edit'; //This may need to be uncommented depending on your orgs Organization Wide Defaults(OWD) settings. If you are receiving FIELD_INTEGRITY_EXCEPTION, field integrity exception: unknown (Opportunity access level below organization default): [unknown], uncomment this line.
         } else {
-            role = roles[0];
+            role = rolesToUpdate[0];
         }
-
         role.Name = 'CRO';
 
-        upsert role;
+        Database.upsert(role, accessLevel.USER_MODE);
     }
 }
